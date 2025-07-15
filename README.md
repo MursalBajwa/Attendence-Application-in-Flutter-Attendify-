@@ -1,4 +1,4 @@
-# blood_donation
+# Attendify
 
 A new Flutter project.
 
