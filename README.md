@@ -1,299 +1,233 @@
-attendify — Student Attendance Mobile App
-Mobile app to manage students, classes, attendance and generate Excel reports (Flutter + Firebase).
+# attendify — Student Attendance Mobile App
 
-Table of contents
-Project overview
+**Mobile app to manage students, classes, attendance and generate Excel reports (Flutter + Firebase).**
 
-Key features
+---
 
-Screens / UX flow
+## Table of contents
+- [Project overview](#project-overview)  
+- [Key features](#key-features)  
+- [Screens / UX flow](#screens--ux-flow)  
+- [Firestore data model (brief)](#firestore-data-model-brief)  
+- [How it works (behavior & important rules)](#how-it-works-behavior--important-rules)  
+- [Setup & run locally](#setup--run-locally)  
+- [Permissions](#permissions)  
+- [Architecture & diagram explanation](#architecture--diagram-explanation)  
+- [Support documentation mapping (UI → DB actions)](#support-documentation-mapping-ui--db-actions)  
+- [Known limitations & suggested improvements](#known-limitations--suggested-improvements)  
+- [Contributing](#contributing)  
+- [License](#license)
 
-Firestore data model (brief)
+---
 
-How it works (behavior & important rules)
+## Project overview
 
-Setup & run locally
+**Name:** `attendify` — Mobile Application for Attendance Management
 
-Permissions
+**Purpose:** Simplify attendance workflows for instructors and small schools: manage student records, create classes, enroll students, mark attendance (once per day), and export attendance reports to Excel.
 
-Architecture & diagram explanation
+---
 
-Support documentation mapping (UI → DB actions)
+## Key features
+- Email/password authentication (signup & login).  
+- Dashboard with quick access to Students, Classes, Reports, Profile.  
+- CRUD for Students and Classes.  
+- Enroll / unenroll students in classes.  
+- Mark attendance for enrolled students (enforced once per day).  
+- View / edit / delete attendance entries.  
+- Export class attendance for a date range to Excel (saved to device downloads).  
+- Edit user profile (first/last name).
 
-Known limitations & suggested improvements
+---
 
-Contributing
+## Screens / UX flow
+- **Signup** — first name, last name, email, password, confirm password → creates user account.  
+- **Login** — email + password → opens dashboard.  
+- **Dashboard** — cards linking to Students, Classes, Reports, Profile.  
+- **Students** — list, add, edit, delete students.  
+- **Classes** — list, add, edit, delete classes; view enrolled students and attendance.  
+- **Enroll Student** — choose from students not already enrolled and add to a class.  
+- **Mark Attendance** — mark present/absent for enrolled students (only once per day).  
+- **Reports** — select class + date range → generate Excel file, save to device downloads.  
+- **Profile** — edit first and last name.
 
-License
+---
 
-Project overview
-Name: attendify — Mobile Application for Attendance Management
+## Firestore data model (brief)
 
-Purpose: Simplify attendance workflows for instructors and small schools: manage student records, create classes, enroll students, mark attendance (once per day), and export attendance reports to Excel.
+**Key collections and fields**
 
-Key features
-Email/password authentication (signup & login).
+- `users` (document id = `<userUid>`)  
+  - `createdAt` (Timestamp)  
+  - `email`  
+  - `firstName`  
+  - `lastName`
 
-Dashboard with quick access to Students, Classes, Reports, Profile.
+- `Students` (document id = `<studentId>`)  
+  - `name`  
+  - `ownerUid`  
+  - `registrationNumber`  
+  - `enrolledAt` (Timestamp)
 
-CRUD for Students and Classes.
+- `classes` (document id = `<classId>`)  
+  - `courseName`  
+  - `ownerUid`  
+  - `startingDate` / `endingDate`  
+  - `createdBy` (UID)
 
-Enroll / unenroll students in classes.
+  - **subcollection `enrolledStudents`**  
+    - doc id = `<studentId>`  
+    - `name`  
+    - `registrationNumber`  
+    - `enrolledAt` (Timestamp)
 
-Mark attendance for enrolled students (enforced once per day).
+  - **subcollection `attendance`**  
+    - doc id = `<date>` (ISO date string, e.g. `2025-05-24`)  
+    - Fields per student attendance entry: `status` (`"P"`/`"A"`), `markedAt` (Timestamp)
 
-View / edit / delete attendance entries.
+**Common paths**
+- `/classes/{classId}/enrolledStudents/{studentId}`  
+- `/classes/{classId}/attendance/{YYYY-MM-DD}`
 
-Export class attendance for a date range to Excel (saved to device downloads).
+---
 
-Edit user profile (first/last name).
+## How it works (behavior & important rules)
+- **Authentication:** Email/password accounts handled by Firebase Authentication; user metadata stored in `users/{uid}`.  
+- **Student enrollment:** Students live as documents in `Students`. Enrolling copies a snapshot of student info into `/classes/{classId}/enrolledStudents/` so class-level snapshots remain stable even if the original student document changes later.  
+- **Attendance marking rule:** The app enforces one attendance mark per class per day by checking `/classes/{classId}/attendance/{YYYY-MM-DD}` — if an attendance document for that date exists, marking is blocked and the user is notified.  
+- **Reporting:** Selecting class + date range reads the relevant attendance documents and exports an Excel file to the device after required file-permission checks.  
+- **Profile updates:** Editing profile fields updates `users/{uid}` accordingly.
 
-Screens / UX flow
-Signup — first name, last name, email, password, confirm password → creates user account.
+---
 
-Login — email + password → opens dashboard.
+## Setup & run locally
 
-Dashboard — cards linking to Students, Classes, Reports, Profile.
+### Prerequisites
+- Flutter SDK (stable channel).  
+- Android SDK / Xcode (for Android / iOS testing).  
+- A Firebase project with:
+  - Authentication enabled (Email/Password).  
+  - Cloud Firestore enabled.
 
-Students — list, add, edit, delete students.
-
-Classes — list, add, edit, delete classes; view enrolled students and attendance.
-
-Enroll Student — choose from students not already enrolled and add to a class.
-
-Mark Attendance — mark present/absent for enrolled students (only once per day).
-
-Reports — select class + date range → generate Excel file, save to device downloads.
-
-Profile — edit first and last name.
-
-Firestore data model (brief)
-Key collections and fields (example structures):
-
-users (document id = <userUid>)
-json
-Copy
-Edit
-{
-  "createdAt": "<Timestamp>",
-  "email": "teacher@example.com",
-  "firstName": "Jane",
-  "lastName": "Doe"
-}
-Students (document id = <studentId>)
-json
-Copy
-Edit
-{
-  "name": "John Student",
-  "ownerUid": "<userUid>",
-  "registrationNumber": "REG-001",
-  "enrolledAt": "<Timestamp>"
-}
-classes (document id = <classId>)
-json
-Copy
-Edit
-{
-  "courseName": "Math 101",
-  "ownerUid": "<userUid>",
-  "startingDate": "<Timestamp>",
-  "endingDate": "<Timestamp>",
-  "createdBy": "<userUid>"
-}
-Subcollection: /classes/{classId}/enrolledStudents/{studentId}
-
-json
-Copy
-Edit
-{
-  "name": "John Student",
-  "registrationNumber": "REG-001",
-  "enrolledAt": "<Timestamp>"
-}
-Subcollection: /classes/{classId}/attendance/{YYYY-MM-DD}
-
-Document id example: 2025-05-24 (ISO date string)
-
-Document contents: map of student attendance entries plus metadata, or a structured object such as:
-
-json
-Copy
-Edit
-{
-  "markedAt": "<Timestamp>",
-  "entries": {
-    "<studentId>": { "status": "P", "markedAt": "<Timestamp>" },
-    "<studentId2>": { "status": "A", "markedAt": "<Timestamp>" }
-  }
-}
-Common path examples
-
-swift
-Copy
-Edit
-/classes/{classId}/enrolledStudents/{studentId}
-/classes/{classId}/attendance/{YYYY-MM-DD}
-/users/{userUid}
-/Students/{studentId}
-How it works (behavior & important rules)
-Authentication: Email/password accounts handled by Firebase Authentication; user metadata stored in users/{uid}.
-
-Student enrollment: Students live as documents in Students. Enrolling copies a snapshot of student info into /classes/{classId}/enrolledStudents/{studentId} so class-level snapshots remain stable even if the original student document changes later.
-
-Attendance marking rule: The app enforces one attendance mark per class per day by checking /classes/{classId}/attendance/{YYYY-MM-DD} — if a document for that date exists, marking is blocked and the user is notified.
-
-Reporting: Selecting class + date range reads the relevant attendance documents and exports an Excel file to the device after required file-permission checks.
-
-Profile updates: Editing profile fields updates users/{uid} accordingly.
-
-Setup & run locally
-Prerequisites
-Flutter SDK (stable channel)
-
-Android SDK / Xcode (for Android / iOS testing)
-
-A Firebase project with:
-
-Authentication enabled (Email/Password)
-
-Cloud Firestore enabled
-
-Steps
-Install dependencies:
-
-bash
-Copy
-Edit
+### Steps
+1. Install Flutter dependencies:
+```bash
 flutter pub get
-Configure Firebase:
+```
 
-Create a Firebase project in the Firebase Console.
+2. Configure Firebase for the app:
+- Create a Firebase project and enable Authentication (Email/Password) and Firestore.  
+- Add Android and/or iOS apps in the Firebase console.  
+- Download platform configuration files (`google-services.json` for Android, `GoogleService-Info.plist` for iOS) and place them in the appropriate platform folders.  
+- If the project expects `firebase_options.dart`, generate it (e.g., using flutterfire CLI) and include it in `/lib`.
 
-Enable Email/Password sign-in under Authentication.
-
-Enable Cloud Firestore.
-
-Add Android and/or iOS apps in Firebase and download platform config files:
-
-google-services.json → place in android/app/
-
-GoogleService-Info.plist → place in ios/Runner/
-
-If the project expects firebase_options.dart, generate it (e.g., with the flutterfire CLI) and include it in /lib.
-
-Run the app:
-
-bash
-Copy
-Edit
+3. Run the app on a device or emulator:
+```bash
 flutter run
-Notes
+```
 
-During development, Firestore rules may be relaxed for convenience — tighten them before publishing to production.
+**Notes**
+- Make sure `firebase_options.dart` (if used) is present and correctly configured.  
+- During development, Firestore rules may be relaxed for convenience — tighten them before publishing to production.
 
-Ensure firebase_options.dart (if used) is present and correctly configured.
+---
 
-Permissions
-Android: Request runtime file storage access to save Excel reports to Downloads (or use scoped storage APIs on newer Android versions).
+## Permissions
+- **Android:** Request runtime file storage access to save Excel reports to Downloads.  
+- **iOS:** Configure file saving/document picker entitlements if saving to Files.
 
-iOS: Configure file saving/document picker entitlements if saving to Files.
+---
 
-Runtime: App requests required permissions before saving/exporting files.
+## Architecture & diagram explanation
 
-Architecture & diagram explanation
-Components
-Mobile client (Flutter UI): All screens and UX for authentication, managing students/classes, marking attendance, and report generation.
+### Components
+- **Mobile client (Flutter UI):** all screens and UX for authentication, managing students/classes, marking attendance, and report generation.  
+- **Firebase Authentication:** handles user sign-up and sign-in.  
+- **Cloud Firestore:** primary backend storing `users`, `Students`, `classes`, and subcollections `enrolledStudents` and `attendance`.  
+- **Local device storage:** used to save generated Excel files (Downloads or Files).
 
-Firebase Authentication: Handles user sign-up and sign-in.
+### Data & control flows
+- **Signup / Login** — client uses Firebase Auth; on successful signup, create a `users/{uid}` document with `firstName`, `lastName`, `email`, and `createdAt`.  
+- **Student CRUD** — create/edit/delete operations update `Students` collection.  
+- **Class CRUD and Enrollment** — create class docs in `classes`; enrolling creates a snapshot in `/classes/{classId}/enrolledStudents/{studentId}` to preserve enrollment state.  
+- **Attendance** — when marking attendance the client checks for `/classes/{classId}/attendance/{YYYY-MM-DD}`. If not found, it writes attendance data; if found, it prevents duplicate marking. Attendance entries include `status` and `markedAt`.  
+- **Report generation** — client reads attendance entries over a date range and assembles an Excel file for export.  
+- **Profile updates** — updates reflected in `users/{uid}`.
 
-Cloud Firestore: Primary backend storing users, Students, classes, and subcollections enrolledStudents and attendance.
+### Design rationale
+- Storing `enrolledStudents` as a subcollection simplifies fetching class rosters and keeps class-specific student snapshots stable.  
+- Using date-keyed documents for attendance makes it simple to check whether attendance has already been taken for a given day.  
+- Copying student info into `enrolledStudents` ensures historical accuracy of class rosters.
 
-Local device storage: Used to save generated Excel files (Downloads or Files).
+---
 
-Data & control flows
-Signup / Login: Client uses Firebase Auth; on successful signup, create users/{uid} document with firstName, lastName, email, and createdAt.
+## Support documentation mapping (UI → DB actions)
+- **Signup** → create `users/{uid}`.  
+- **Login** → Firebase Auth → fetch `users/{uid}`.  
+- **Add student** → create document in `Students`.  
+- **Edit student** → update `Students/{studentId}`.  
+- **Delete student** → delete `Students/{studentId}` (consider whether to cascade or flag enrollments).  
+- **Add class** → create `classes/{classId}`.  
+- **Enroll student** → create `classes/{classId}/enrolledStudents/{studentId}` (copy of student data).  
+- **Mark attendance** → write to `classes/{classId}/attendance/{YYYY-MM-DD}` (entries + `markedAt`).  
+- **Generate report** → read `/classes/{classId}/attendance/*` within date range → export to Excel.
 
-Student CRUD: Create/edit/delete operations update Students collection.
+---
 
-Class CRUD & Enrollment: Create classes/{classId}; enrolling creates a snapshot in /classes/{classId}/enrolledStudents/{studentId}.
+## Known limitations & suggested improvements
+- **Concurrency / race conditions:** If multiple users mark attendance simultaneously for the same class, consider server-side transactions or cloud functions to avoid race conditions.  
+- **Multiple sessions per day:** If you need multiple attendance sessions per day, extend the attendance key to include session id/time.  
+- **Search & filters:** Add search by name or registration number and improved filtering on Students/Class lists.  
+- **Offline support:** Add local caching + sync so teachers can mark attendance offline and sync later.  
+- **Security rules:** Implement Firestore security rules that restrict access to owners or authorized users only.  
+- **Testing & logging:** Add automated tests and structured logging for easier troubleshooting.
 
-Attendance: When marking attendance the client checks for /classes/{classId}/attendance/{YYYY-MM-DD}. If not found, it writes attendance data; if found, it prevents duplicate marking. Attendance entries include status and markedAt.
+---
 
-Report generation: Client reads attendance entries over a date range and assembles an Excel file for export.
+## Contributing
+- Create a branch for your feature or fix.  
+- Implement changes and add tests where appropriate.  
+- Submit your changes for review.
 
-Profile updates: Updates reflected in users/{uid}.
+---
 
-Design rationale
-Storing enrolledStudents as a subcollection simplifies fetching class rosters and keeps class-specific student snapshots stable.
+## License
 
-Using date-keyed documents for attendance makes it simple to check whether attendance has already been taken for a given day.
+Choose a license for your project (MIT is a common, permissive choice). Example header:
 
-Copying student info into enrolledStudents ensures historical accuracy of class rosters.
-
-Support documentation mapping (UI → DB actions)
-Signup → create users/{uid}
-
-Login → Firebase Auth → fetch users/{uid}
-
-Add student → create document in Students
-
-Edit student → update Students/{studentId}
-
-Delete student → delete Students/{studentId} (consider cascade or flagging enrollments)
-
-Add class → create classes/{classId}
-
-Enroll student → create classes/{classId}/enrolledStudents/{studentId} (copy of student data)
-
-Mark attendance → write to classes/{classId}/attendance/{YYYY-MM-DD} (entries + markedAt)
-
-Generate report → read /classes/{classId}/attendance/* within date range → export to Excel
-
-Known limitations & suggested improvements
-Concurrency / race conditions: If multiple users mark attendance simultaneously for the same class, consider server-side transactions or Cloud Functions to avoid race conditions.
-
-Multiple sessions per day: If multiple attendance sessions per day are required, extend the attendance key to include session id/time.
-
-Search & filters: Add search by name or registration number and improved filtering on Students/Class lists.
-
-Offline support: Add local caching + sync so teachers can mark attendance offline and sync later.
-
-Security rules: Implement Firestore security rules that restrict access to owners or authorized users only.
-
-Testing & logging: Add automated tests and structured logging for easier troubleshooting.
-
-Contributing
-Create a branch for your feature or fix.
-
-Implement changes and add tests where appropriate.
-
-Submit a pull request for review.
-
-License
+```
 MIT License
+© [year] [owner]
+Permission is hereby granted, free of charge, to any person obtaining a copy...
+```
 
-sql
-Copy
-Edit
-MIT License
+---
 
-Copyright (c) [year] [owner]
+## Appendix — Example Firestore structure (sample)
+```text
+users/
+  <uid>:
+    firstName: "Ali"
+    lastName: "Khan"
+    email: "ali@example.com"
+    createdAt: Timestamp
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Students/
+  <studentId>:
+    name: "Ayesha"
+    registrationNumber: "REG123"
+    ownerUid: "<uid>"
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+classes/
+  <classId>:
+    courseName: "Math 101"
+    ownerUid: "<uid>"
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+classes/<classId>/enrolledStudents/<studentId>:
+  name: "Ayesha"
+  registrationNumber: "REG123"
+  enrolledAt: Timestamp
+
+classes/<classId>/attendance/2025-08-11:
+  <studentId>: { status: "P", markedAt: Timestamp }
+```
