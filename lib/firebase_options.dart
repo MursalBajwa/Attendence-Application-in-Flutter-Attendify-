@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCyoQt0HfQdRR4puWl1MwQImqpET0KYA4g',
+    apiKey: '',
     appId: '1:193075970898:android:4c13ad1c365d0954d6b08b',
     messagingSenderId: '193075970898',
     projectId: 'attendify-7fcde',
@@ -58,7 +58,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBOQ1cZ0YKdALNAYsLK4u5G2vMTqXZHeVc',
+    apiKey: '',
     appId: '1:193075970898:ios:344bb134a53c88ced6b08b',
     messagingSenderId: '193075970898',
     projectId: 'attendify-7fcde',
