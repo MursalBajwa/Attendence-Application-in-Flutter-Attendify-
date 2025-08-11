@@ -197,7 +197,7 @@ Choose a license for your project (MIT is a common, permissive choice). Example 
 
 ```
 MIT License
-© [year] [owner]
+© [2025] [MursalBajwa]
 Permission is hereby granted, free of charge, to any person obtaining a copy...
 ```
 
